@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_library(
     glad
-	src/glad.c
+	src/glad.cpp
 )
 
 target_include_directories(

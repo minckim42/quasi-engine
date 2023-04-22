@@ -8,10 +8,19 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(
     SOURCE_FILES
-	source/shader.cpp
+	source/animation.cpp
+	source/buffer.cpp
+	source/bone.cpp
+	source/camera.cpp
 	source/glfw_window.cpp
-	source/texture.cpp
+	source/material.cpp
+	source/mesh.cpp
+	source/model.cpp
+	source/model_load.cpp
+	source/move.cpp
+	source/shader.cpp
 	source/stb_image.cpp
+	source/texture.cpp
 	main.cpp
 )
 
@@ -26,6 +35,7 @@ target_include_directories(
 	include
 	glad/include
 	glfw-3.3.8/include
+	assimp/include
 )
 
 target_compile_definitions(

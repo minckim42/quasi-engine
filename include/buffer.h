@@ -2,8 +2,12 @@
 #include <vector>
 #include <glad/glad.h>
 #include "shader.h"
+#include "vertex_attrib.h"
 
-template <typename V>
+
+#include <iostream>
+#include <type_traits>
+template <typename DataType>
 class Buffer
 {
 public:
@@ -12,7 +16,7 @@ public:
 		glCreateBuffers(1, &id);
 	}
 
-	Buffer(const std::vector<V>& vertices)
+	Buffer(const std::vector<DataType>& vertices)
 	{
 		glCreateBuffers(1, &id);
 		send_to_device(vertices);
@@ -34,15 +38,21 @@ public:
 
 	Buffer& operator=(Buffer&& other)
 	{
+		if (id)
+			glDeleteBuffers(1, &id);
 		id = other.id;
 		element_count = other.element_count;
 		other.id = 0;
 	}
 
-	void send_to_device(const std::vector<V>& data)
+	void send_to_device(const std::vector<DataType>& data)
 	{
 		element_count = data.size();
-		glNamedBufferData(id, element_count * sizeof(V), data.data(), GL_STATIC_DRAW);
+		if constexpr (std::is_same_v<DataType, BoneIndices>)
+		{
+			std::cout << sizeof(DataType) << std::endl;
+		}
+		glNamedBufferData(id, element_count * sizeof(DataType), data.data(), GL_STATIC_DRAW);
 	}
 
 	operator GLuint()
@@ -59,6 +69,7 @@ public:
 	{
 		return element_count;
 	}
+
 private:
 	GLuint id = 0;
 	unsigned int element_count = 0;
@@ -66,53 +77,22 @@ private:
 
 using ElementBuffer = Buffer<unsigned int>;
 
-template <typename V>
 class VertexArray
 {
 public:
-	VertexArray()
-	{
-		glCreateVertexArrays(1, &id);
-		enable_attrib();
-	}
+	VertexArray();
+	~VertexArray();
+	VertexArray(const VertexArray&) = delete;
+	VertexArray& operator=(const VertexArray&) = delete;
+	VertexArray(VertexArray&& other) noexcept;
+	VertexArray& operator=(VertexArray& other) noexcept;
 
-	~VertexArray()
-	{
-		if (id)
-			glDeleteVertexArrays(1, &id);
-	}
-
-	void bind(const Buffer<V>& vertex_buffer, const ElementBuffer& element_buffer)
-	{
-		glVertexArrayVertexBuffer(id, 0, vertex_buffer, 0, sizeof(V));
-		glVertexArrayElementBuffer(id, element_buffer);
-		element_count = element_buffer.get_element_count();
-	}
-
-	void draw(const Shader& shader) const
-	{
-		glBindVertexArray(id);
-		glDrawElements(GL_TRIANGLES, element_count, GL_UNSIGNED_INT, nullptr);
-	}
-
-	operator GLuint()
-	{
-		return id;
-	}
-
-	operator GLuint() const
-	{
-		return id;
-	}
+	void set_element_count(size_t size);
+	void draw() const;
+	operator GLuint();
+	operator GLuint() const;
 
 private:
-
-	void enable_attrib()
-	{
-		V::enable_attrib(id);
-	}
-
 	GLuint id = 0;
 	unsigned int element_count = 0;
 };
-

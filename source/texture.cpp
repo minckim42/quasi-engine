@@ -1,6 +1,8 @@
 #include "texture.h"
 #include "stb_image.h"
 #include <string>
+#include "definition.h"
+
 using namespace std::string_literals;
 
 Texture::Texture()
@@ -20,12 +22,12 @@ Texture::~Texture()
 		glDeleteTextures(1, &id);
 }
 
-Texture::Texture(Texture&& other):
+Texture::Texture(Texture&& other) noexcept:
 	id(other.id), width(other.id), height(other.height), channel_size(other.channel_size)
 {
 }
 
-Texture& Texture::operator=(Texture&& other)
+Texture& Texture::operator=(Texture&& other) noexcept
 {
 	id = other.id;
 	width = other.width;
@@ -65,4 +67,10 @@ void Texture::bind(const Shader& shader, const std::string_view& name, GLuint un
 {
 	glBindTextureUnit(unit, id);
 	shader.set(name, unit);
+}
+
+void Texture::bind(const Shader& shader, GLuint location, GLuint unit) const
+{
+	glBindTextureUnit(unit, id);
+	shader.set(location, unit);
 }

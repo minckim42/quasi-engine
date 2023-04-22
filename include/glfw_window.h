@@ -34,9 +34,10 @@ public:
 	template <typename F, typename... ARG>
 	void loop(F& f, ARG&...arg)
 	{
+		glEnable(GL_DEPTH_TEST);
 		while (!glfwWindowShouldClose(window))
 		{
-			glClear(GL_COLOR_BUFFER_BIT);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			f(arg...);
 			glfwSwapBuffers(window);
 			glfwPollEvents();
@@ -46,9 +47,10 @@ public:
 	template <typename F, typename... ARG>
 	void loop(F&& f, ARG&...arg)
 	{
+		glEnable(GL_DEPTH_TEST);
 		while (!glfwWindowShouldClose(window))
 		{
-			glClear(GL_COLOR_BUFFER_BIT);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			f(arg...);
 			glfwSwapBuffers(window);
 			glfwPollEvents();

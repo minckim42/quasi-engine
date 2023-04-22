@@ -6,6 +6,7 @@
 #include "shader.h"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/ext.hpp>
+#include "definition.h"
 
 using namespace std::string_literals;
 using namespace std::string_view_literals;
@@ -73,13 +74,13 @@ ShaderSource::~ShaderSource()
 		glDeleteShader(id);
 }
 
-ShaderSource::ShaderSource(ShaderSource&& other):
+ShaderSource::ShaderSource(ShaderSource&& other) noexcept:
 	id(other.id)
 {
 	other.id = 0;
 }
 
-ShaderSource& ShaderSource::operator=(ShaderSource&& other)
+ShaderSource& ShaderSource::operator=(ShaderSource&& other) noexcept
 {
 	id = other.id;
 	other.id = 0;
@@ -155,6 +156,11 @@ Shader::operator GLuint() const
 	return id;
 }
 
+void Shader::use() const
+{
+	glUseProgram(id);
+}
+
 void Shader::set(const std::string_view& variable_name, unsigned int value) const noexcept
 {
    glUniform1ui(glGetUniformLocation(id, variable_name.data()), value);
@@ -170,134 +176,79 @@ void Shader::set(const std::string_view& variable_name, float value) const noexc
    glUniform1f(glGetUniformLocation(id, variable_name.data()), value);
 }
 
-void Shader::set(const std::string_view& variable_name, glm::vec2 value) const noexcept
-{
-   glUniform2fv(glGetUniformLocation(id, variable_name.data()), 1, glm::value_ptr(value));
-}
-
-void Shader::set(const std::string_view& variable_name, glm::vec3 value) const noexcept
-{
-   glUniform3fv(glGetUniformLocation(id, variable_name.data()), 1, glm::value_ptr(value));
-}
-
-void Shader::set(const std::string_view& variable_name, glm::vec4 value) const noexcept
-{
-   glUniform4fv(glGetUniformLocation(id, variable_name.data()), 1, glm::value_ptr(value));
-}
-
-void Shader::set(const std::string_view& variable_name, glm::mat2 value) const noexcept
-{
-   glUniformMatrix2fv(glGetUniformLocation(id, variable_name.data()), 1, GL_FALSE, glm::value_ptr(value));
-}
-
-void Shader::set(const std::string_view& variable_name, glm::mat3 value) const noexcept
-{
-   glUniformMatrix3fv(glGetUniformLocation(id, variable_name.data()), 1, GL_FALSE, glm::value_ptr(value));
-}
-
-void Shader::set(const std::string_view& variable_name, glm::mat4 value) const noexcept
-{
-   glUniformMatrix4fv(glGetUniformLocation(id, variable_name.data()), 1, GL_FALSE, glm::value_ptr(value));
-}
-
-void Shader::set(const std::string_view& variable_name, int count, glm::vec2 value) const noexcept
+void Shader::set(const std::string_view& variable_name, const glm::vec2& value, int count) const noexcept
 {
    glUniform2fv(glGetUniformLocation(id, variable_name.data()), count, glm::value_ptr(value));
 }
 
-void Shader::set(const std::string_view& variable_name, int count, glm::vec3 value) const noexcept
+void Shader::set(const std::string_view& variable_name, const glm::vec3& value, int count) const noexcept
 {
    glUniform3fv(glGetUniformLocation(id, variable_name.data()), count, glm::value_ptr(value));
 }
 
-void Shader::set(const std::string_view& variable_name, int count, glm::vec4 value) const noexcept
+void Shader::set(const std::string_view& variable_name, const glm::vec4& value, int count) const noexcept
 {
    glUniform4fv(glGetUniformLocation(id, variable_name.data()), count, glm::value_ptr(value));
 }
 
-void Shader::set(const std::string_view& variable_name, int count, glm::mat2 value) const noexcept
+void Shader::set(const std::string_view& variable_name, const glm::mat2& value, int count) const noexcept
 {
    glUniformMatrix2fv(glGetUniformLocation(id, variable_name.data()), count, GL_FALSE, glm::value_ptr(value));
 }
 
-void Shader::set(const std::string_view& variable_name, int count, glm::mat3 value) const noexcept
+void Shader::set(const std::string_view& variable_name, const glm::mat3& value, int count) const noexcept
 {
    glUniformMatrix3fv(glGetUniformLocation(id, variable_name.data()), count, GL_FALSE, glm::value_ptr(value));
 }
 
-void Shader::set(const std::string_view& variable_name, int count, glm::mat4 value) const noexcept
+void Shader::set(const std::string_view& variable_name, const glm::mat4& value, int count) const noexcept
 {
    glUniformMatrix4fv(glGetUniformLocation(id, variable_name.data()), count, GL_FALSE, glm::value_ptr(value));
 }
 
-void Shader::set(int unit, int value) noexcept
+void Shader::set(GLuint location, unsigned int value) const noexcept
 {
-   glUniform1i(unit, value);
+   glUniform1ui(location, value);
 }
 
-void Shader::set(int unit, float value) noexcept
+void Shader::set(GLuint location, int value) const noexcept
 {
-   glUniform1f(unit, value);
+   glUniform1i(location, value);
 }
 
-void Shader::set(int unit, glm::vec2 value) noexcept
+void Shader::set(GLuint location, float value) const noexcept
 {
-   glUniform2fv(unit, 1, glm::value_ptr(value));
+   glUniform1f(location, value);
 }
 
-void Shader::set(int unit, glm::vec3 value) noexcept
+void Shader::set(GLuint location, const glm::vec2& value, int count) const noexcept
 {
-   glUniform3fv(unit, 1, glm::value_ptr(value));
+   glUniform2fv(location, count, glm::value_ptr(value));
 }
 
-void Shader::set(int unit, glm::vec4 value) noexcept
+void Shader::set(GLuint location, const glm::vec3& value, int count) const noexcept
 {
-   glUniform4fv(unit, 1, glm::value_ptr(value));
+   glUniform3fv(location, count, glm::value_ptr(value));
 }
 
-void Shader::set(int unit, glm::mat2 value) noexcept
+void Shader::set(GLuint location, const glm::vec4& value, int count) const noexcept
 {
-   glUniformMatrix2fv(unit, 1, GL_FALSE, glm::value_ptr(value));
+   glUniform4fv(location, count, glm::value_ptr(value));
 }
 
-void Shader::set(int unit, glm::mat3 value) noexcept
+void Shader::set(GLuint location, const glm::mat2& value, int count) const noexcept
 {
-   glUniformMatrix3fv(unit, 1, GL_FALSE, glm::value_ptr(value));
+   glUniformMatrix2fv(location, count, GL_FALSE, glm::value_ptr(value));
 }
 
-void Shader::set(int unit, glm::mat4 value) noexcept
+void Shader::set(GLuint location, const glm::mat3& value, int count) const noexcept
 {
-   glUniformMatrix4fv(unit, 1, GL_FALSE, glm::value_ptr(value));
+   glUniformMatrix3fv(location, count, GL_FALSE, glm::value_ptr(value));
 }
 
-void Shader::set(int unit, int count, glm::vec2 value) noexcept
+void Shader::set(GLuint location, const glm::mat4& value, int count) const noexcept
 {
-   glUniform2fv(unit, count, glm::value_ptr(value));
-}
-
-void Shader::set(int unit, int count, glm::vec3 value) noexcept
-{
-   glUniform3fv(unit, count, glm::value_ptr(value));
-}
-
-void Shader::set(int unit, int count, glm::vec4 value) noexcept
-{
-   glUniform4fv(unit, count, glm::value_ptr(value));
-}
-
-void Shader::set(int unit, int count, glm::mat2 value) noexcept
-{
-   glUniformMatrix2fv(unit, count, GL_FALSE, glm::value_ptr(value));
-}
-
-void Shader::set(int unit, int count, glm::mat3 value) noexcept
-{
-   glUniformMatrix3fv(unit, count, GL_FALSE, glm::value_ptr(value));
-}
-
-void Shader::set(int unit, int count, glm::mat4 value) noexcept
-{
-   glUniformMatrix4fv(unit, count, GL_FALSE, glm::value_ptr(value));
+   glUniformMatrix4fv(location, count, GL_FALSE, glm::value_ptr(value));
 
 }
 
