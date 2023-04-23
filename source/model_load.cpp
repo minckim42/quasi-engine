@@ -8,7 +8,7 @@
 
 #include "clock.h"
 
-constexpr int MULTI_THREAD_LOADING = 0;
+constexpr int MULTI_THREAD_LOADING = 1;
 
 glm::vec3 to_glm(const aiColor3D& v)
 {
@@ -192,27 +192,37 @@ void AssimpLoader::load_mesh_from_scene()
 	}
 }
 
-
-
 void AssimpLoader::mesh_set_face(std::shared_ptr<Mesh> mesh, const aiMesh* ai_mesh)
 {
 	if constexpr (MULTI_THREAD_LOADING)
 	{
-		std::cout << "multy!\n";
-		mesh->indices.resize(ai_mesh->mNumFaces * 3);
-		parallel.work(ai_mesh->mFaces, ai_mesh->mNumFaces, 8,
-			[&](void* p, int i)
+		if (ai_mesh->mNumFaces > 4096)
+		{
+			mesh->indices.resize(ai_mesh->mNumFaces * 3);
+			parallel.work(ai_mesh->mFaces, ai_mesh->mNumFaces, 15,
+				[&mesh](void* p, size_t i)
+				{
+					const unsigned int* indices = static_cast<const aiFace*>(p)[i].mIndices;
+					mesh->indices[i * 3 + 0] = indices[0];
+					mesh->indices[i * 3 + 1] = indices[1];
+					mesh->indices[i * 3 + 2] = indices[2];
+				}
+			);
+		}
+		else
+		{
+			mesh->indices.reserve(ai_mesh->mNumFaces * 3);
+			for (int i = 0; i < ai_mesh->mNumFaces; ++i)
 			{
-				const aiFace& ai_face = static_cast<const aiFace*>(p)[i];
-				mesh->indices[i * 3 + 0] = ai_face.mIndices[0];
-				mesh->indices[i * 3 + 1] = ai_face.mIndices[1];
-				mesh->indices[i * 3 + 2] = ai_face.mIndices[2];
+				const aiFace& ai_face = ai_mesh->mFaces[i];
+				mesh->indices.emplace_back(ai_face.mIndices[0]);
+				mesh->indices.emplace_back(ai_face.mIndices[1]);
+				mesh->indices.emplace_back(ai_face.mIndices[2]);
 			}
-		);
+		}
 	}
 	else
 	{
-		std::cout << "single!\n";
 		mesh->indices.reserve(ai_mesh->mNumFaces * 3);
 		for (int i = 0; i < ai_mesh->mNumFaces; ++i)
 		{
@@ -230,18 +240,27 @@ static void copy_from_ai(std::vector<Type>& dst, AiType* src, size_t size, Paral
 
 	if constexpr (MULTI_THREAD_LOADING)
 	{
-		std::cout << "multy!\n";
-		dst.resize(size);
-		parallel->work(src, size, 8, 
-			[&dst](void* p, size_t i)
+		if (size > 4096)
+		{
+			dst.resize(size);
+			parallel->work(src, size, std::min(15llu, size / 256), 
+				[&dst](void* p, size_t i)
+				{
+					dst[i] = to_glm(static_cast<const AiType*>(p)[i]);
+				}
+			);
+		}
+		else
+		{
+			dst.reserve(size);
+			for (int i = 0; i < size; ++i)
 			{
-				dst[i] = to_glm(reinterpret_cast<const AiType*>(p)[i]);
+				dst.emplace_back(to_glm(src[i]));
 			}
-		);
+		}
 	}
 	else
 	{
-		std::cout << "single!\n";
 		dst.reserve(size);
 		for (int i = 0; i < size; ++i)
 		{

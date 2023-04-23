@@ -51,7 +51,8 @@ public:
 		blockers(max_size),
 		releasers(max_size),
 		catchers(max_size),
-		r_catchers(max_size)
+		r_catchers(max_size),
+		start(nullptr)
 	{
 		workers.reserve(max_size);
 		for (int i = 0; i < max_size; ++i)
