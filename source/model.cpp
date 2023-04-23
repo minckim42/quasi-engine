@@ -64,3 +64,20 @@ std::pair<glm::vec3, glm::vec3> Model::getBoundingBox() const
 	result.second = glm::vec3(transform * glm::vec4(result.second, 1.0f));
 	return result;
 }
+
+bool Model::cull_empty()
+{
+	auto it = children.begin();
+	while (it < children.end())
+	{
+		if ((*it)->cull_empty())
+			it = children.erase(it);
+		else
+			++it;
+	}
+	if (children.empty() && meshes.empty())
+	{
+		return true;
+	}
+	return false;
+}

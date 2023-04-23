@@ -55,6 +55,11 @@ public:
 		glNamedBufferData(id, element_count * sizeof(DataType), data.data(), GL_STATIC_DRAW);
 	}
 
+	GLuint get() const 
+	{
+		return id;
+	}
+
 	operator GLuint()
 	{
 		return id;
@@ -89,6 +94,7 @@ public:
 
 	void set_element_count(size_t size);
 	void draw() const;
+	GLuint get() const;
 	operator GLuint();
 	operator GLuint() const;
 

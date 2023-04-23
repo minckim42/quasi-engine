@@ -6,6 +6,10 @@
 
 #include "glm_to_string.h"
 
+#include "clock.h"
+
+constexpr int MULTI_THREAD_LOADING = 0;
+
 glm::vec3 to_glm(const aiColor3D& v)
 {
 	return {v[0], v[1], v[2]};
@@ -80,7 +84,11 @@ std::shared_ptr<Object> AssimpLoader::load(
 
 	load_texture_from_scene();
 	load_material_from_scene();
+	
+	TimePoint t0 = Clock::now();
 	load_mesh_from_scene();
+	TimePoint t1 = Clock::now();
+	std::cout << "load mesh: " << (t1 - t0).count() /1000 << std::endl;
 	
 	root_node = load_node(scene->mRootNode);
 	
@@ -93,6 +101,7 @@ std::shared_ptr<Object> AssimpLoader::load(
 	{
 		mesh->enable_attrib();
 	}
+	root_node->cull_empty();
 	return root_node;
 }
 
@@ -184,51 +193,113 @@ void AssimpLoader::load_mesh_from_scene()
 }
 
 
+
 void AssimpLoader::mesh_set_face(std::shared_ptr<Mesh> mesh, const aiMesh* ai_mesh)
 {
-	mesh->indices.reserve(ai_mesh->mNumFaces * 3);
-	for (int i = 0; i < ai_mesh->mNumFaces; ++i)
+	if constexpr (MULTI_THREAD_LOADING)
 	{
-		const aiFace& ai_face = ai_mesh->mFaces[i];
-		mesh->indices.emplace_back(ai_face.mIndices[0]);
-		mesh->indices.emplace_back(ai_face.mIndices[1]);
-		mesh->indices.emplace_back(ai_face.mIndices[2]);
+		std::cout << "multy!\n";
+		mesh->indices.resize(ai_mesh->mNumFaces * 3);
+		parallel.work(ai_mesh->mFaces, ai_mesh->mNumFaces, 8,
+			[&](void* p, int i)
+			{
+				const aiFace& ai_face = static_cast<const aiFace*>(p)[i];
+				mesh->indices[i * 3 + 0] = ai_face.mIndices[0];
+				mesh->indices[i * 3 + 1] = ai_face.mIndices[1];
+				mesh->indices[i * 3 + 2] = ai_face.mIndices[2];
+			}
+		);
+	}
+	else
+	{
+		std::cout << "single!\n";
+		mesh->indices.reserve(ai_mesh->mNumFaces * 3);
+		for (int i = 0; i < ai_mesh->mNumFaces; ++i)
+		{
+			const aiFace& ai_face = ai_mesh->mFaces[i];
+			mesh->indices.emplace_back(ai_face.mIndices[0]);
+			mesh->indices.emplace_back(ai_face.mIndices[1]);
+			mesh->indices.emplace_back(ai_face.mIndices[2]);
+		}
 	}
 }
 
 template <typename Type, typename AiType>
-static void copy_from_ai(std::vector<Type>& dst, const AiType* src, size_t size)
+static void copy_from_ai(std::vector<Type>& dst, AiType* src, size_t size, ParallelProccessor* parallel = nullptr)
 {
-	dst.reserve(size);
-	for (int i = 0; i < size; ++i)
+
+	if constexpr (MULTI_THREAD_LOADING)
 	{
-		dst.emplace_back(to_glm(src[i]));
+		std::cout << "multy!\n";
+		dst.resize(size);
+		parallel->work(src, size, 8, 
+			[&dst](void* p, size_t i)
+			{
+				dst[i] = to_glm(reinterpret_cast<const AiType*>(p)[i]);
+			}
+		);
+	}
+	else
+	{
+		std::cout << "single!\n";
+		dst.reserve(size);
+		for (int i = 0; i < size; ++i)
+		{
+			dst.emplace_back(to_glm(src[i]));
+		}
 	}
 }
 
 std::shared_ptr<Mesh> AssimpLoader::load_mesh(const aiMesh* ai_mesh)
 {
 	std::shared_ptr<Mesh> mesh(new Mesh);
-	if (ai_mesh->HasPositions())
+	if constexpr (MULTI_THREAD_LOADING)
 	{
-		copy_from_ai(mesh->position, ai_mesh->mVertices, ai_mesh->mNumVertices);
+		if (ai_mesh->HasPositions())
+		{
+			copy_from_ai(mesh->position, ai_mesh->mVertices, ai_mesh->mNumVertices, &parallel);
+		}
+		if (ai_mesh->HasNormals())
+		{
+			copy_from_ai(mesh->normal, ai_mesh->mNormals, ai_mesh->mNumVertices, &parallel);
+		}
+		if (ai_mesh->HasTangentsAndBitangents())
+		{
+			copy_from_ai(mesh->tangent, ai_mesh->mTangents, ai_mesh->mNumVertices, &parallel);
+			copy_from_ai(mesh->bi_tangent, ai_mesh->mBitangents, ai_mesh->mNumVertices, &parallel);
+		}
+		if (ai_mesh->HasTextureCoords(0))
+		{
+			copy_from_ai(mesh->tex_coord, ai_mesh->mTextureCoords[0], ai_mesh->mNumVertices, &parallel);
+		}
+		if (ai_mesh->HasVertexColors(0))
+		{
+			copy_from_ai(mesh->color, ai_mesh->mColors[0], ai_mesh->mNumVertices, &parallel);
+		}
 	}
-	if (ai_mesh->HasNormals())
+	else
 	{
-		copy_from_ai(mesh->normal, ai_mesh->mNormals, ai_mesh->mNumVertices);
-	}
-	if (ai_mesh->HasTangentsAndBitangents())
-	{
-		copy_from_ai(mesh->tangent, ai_mesh->mTangents, ai_mesh->mNumVertices);
-		copy_from_ai(mesh->bi_tangent, ai_mesh->mBitangents, ai_mesh->mNumVertices);
-	}
-	if (ai_mesh->HasTextureCoords(0))
-	{
-		copy_from_ai(mesh->tex_coord, ai_mesh->mTextureCoords[0], ai_mesh->mNumVertices);
-	}
-	if (ai_mesh->HasVertexColors(0))
-	{
-		copy_from_ai(mesh->color, ai_mesh->mColors[0], ai_mesh->mNumVertices);
+		if (ai_mesh->HasPositions())
+		{
+			copy_from_ai(mesh->position, ai_mesh->mVertices, ai_mesh->mNumVertices);
+		}
+		if (ai_mesh->HasNormals())
+		{
+			copy_from_ai(mesh->normal, ai_mesh->mNormals, ai_mesh->mNumVertices);
+		}
+		if (ai_mesh->HasTangentsAndBitangents())
+		{
+			copy_from_ai(mesh->tangent, ai_mesh->mTangents, ai_mesh->mNumVertices);
+			copy_from_ai(mesh->bi_tangent, ai_mesh->mBitangents, ai_mesh->mNumVertices);
+		}
+		if (ai_mesh->HasTextureCoords(0))
+		{
+			copy_from_ai(mesh->tex_coord, ai_mesh->mTextureCoords[0], ai_mesh->mNumVertices);
+		}
+		if (ai_mesh->HasVertexColors(0))
+		{
+			copy_from_ai(mesh->color, ai_mesh->mColors[0], ai_mesh->mNumVertices);
+		}
 	}
 	if (ai_mesh->HasFaces())
 	{
@@ -288,13 +359,14 @@ static void set_weight(std::shared_ptr<Mesh> mesh, const aiBone* ai_bone, unsign
 		const aiVertexWeight& ai_weight = ai_bone->mWeights[i];
 		const int idx_position = ai_weight.mVertexId;
 		unsigned int& indices_count = mesh->bone_indices_count[idx_position];
-		if (indices_count >= WEIGHT_COUNT)
+		if constexpr (WEIGHT_COUNT > 4)
 		{
-			++indices_count;
-			std::cerr 
-				<< "[WARNING] Too many weights: " 
-				<< '[' << idx_position << ']' << indices_count << std::endl;
-			continue;
+			if (indices_count >= WEIGHT_COUNT)
+			{
+				++indices_count;
+				WARNING(__func__, "Too many weights: ", '[', idx_position , ']', indices_count);
+				continue;
+			}
 		}
 		mesh->bone_indices[idx_position][indices_count] = idx_bone;
 		mesh->weights[idx_position][indices_count] = ai_weight.mWeight;
@@ -329,7 +401,7 @@ void AssimpLoader::mesh_set_bone(std::shared_ptr<Mesh> mesh, const aiMesh* ai_me
 		auto it_bone = bone_map.find(ai_bone->mName.C_Str());
 		if (it_bone == bone_map.end())
 		{
-			std::cerr << "[WARNING] Bone not found: " << ai_bone->mName.C_Str() << std::endl;
+			WARNING(__func__, "Bone not found: ", ai_bone->mName.C_Str());
 			continue;
 		}
 		Bone& bone = *it_bone->second;
@@ -365,7 +437,7 @@ void AssimpLoader::load_animation(Mesh* mesh, const aiAnimation* ai_animation)
 		auto it = bone_map.find(node->mNodeName.C_Str());
 		if (it == bone_map.end())
 		{
-			WARNING(__func__, "bone not found: ", node->mNodeName.C_Str());
+			WARNING(__func__, "Bone not found: ", node->mNodeName.C_Str());
 			continue;
 		}
 		Bone* bone = it->second;
@@ -400,4 +472,9 @@ void AssimpLoader::load_animation(Mesh* mesh, const aiAnimation* ai_animation)
 			);
 		}
 	}
+}
+
+void AssimpLoader::cull_empty_node(std::shared_ptr<Model> node)
+{
+
 }

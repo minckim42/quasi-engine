@@ -22,6 +22,7 @@ public:
 		const glm::mat4& projection,
 		const glm::mat4& model = glm::mat4(1.0f)
 	) const override;
+
 	virtual void draw(
 		const Shader& shader, 
 		unsigned int idx_animation,
@@ -30,5 +31,8 @@ public:
 		const glm::mat4& projection,
 		const glm::mat4& model = glm::mat4(1.0f)
 	) override;
+	
 	std::pair<glm::vec3, glm::vec3> getBoundingBox() const override;
+
+	bool cull_empty();
 };

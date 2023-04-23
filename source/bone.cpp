@@ -2,7 +2,7 @@
 #include "model.h"
 
 Bone::Bone(const std::shared_ptr<Model> model):
-	name(model->name), transform(model->transform)
+	name(model->name)
 {
 	children.reserve(model->children.size());
 	for (const std::shared_ptr<Model> node_child: model->children)

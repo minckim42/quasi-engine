@@ -13,7 +13,9 @@ VertexArray::~VertexArray()
 
 VertexArray::VertexArray(VertexArray&& other) noexcept:
 	id(other.id), element_count(other.element_count)
-{}
+{
+	other.id = 0;
+}
 
 VertexArray& VertexArray::operator=(VertexArray& other) noexcept
 {
@@ -40,6 +42,11 @@ VertexArray::operator GLuint()
 }
 
 VertexArray::operator GLuint() const
+{
+	return id;
+}
+
+GLuint VertexArray::get() const
 {
 	return id;
 }

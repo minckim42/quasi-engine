@@ -9,7 +9,7 @@
 
 int main()
 {
-	try
+	// try
 	{
 		using namespace std::string_literals;
 		using namespace std::chrono_literals;
@@ -103,8 +103,8 @@ int main()
 				model->draw(shader, 0, time, camera.view, camera.projection, 
 					{
 						1.0f, 0.0f, 0.0f, 0.0f,
-						0.0f, 0.0f, 1.0f, 0.0f,
 						0.0f, 1.0f, 0.0f, 0.0f,
+						0.0f, 0.0f, 1.0f, 0.0f,
 						0.0f, 0.0f, 0.0f, 1.0f,
 					}
 				);
@@ -114,8 +114,161 @@ int main()
 			}
 		);
 	}
-	catch(const std::exception& e)
+	// catch(const std::exception& e)
+	// {
+	// 	std::cerr << e.what() << '\n';
+	// }
+}
+
+
+
+
+/*
+#include <iostream>
+#include <vector>
+using namespace std;
+
+#include "include/parallel.h"
+
+int foo()
+{
+	static int i;
+	i *= i;
+	return i;
+}
+
+using namespace std::chrono;
+
+int main()
+{
+	int count = 100;
+	int v_size = 100000;
+	int n = 16;
+
 	{
-		std::cerr << e.what() << '\n';
+		std::vector<int> v(v_size);
+		int k = count;
+		ParallelProccessor p(16);
+		time_point t0 = high_resolution_clock::now();
+
+		while (k--)
+		{
+			p.work(&v[0], v.size(), n,
+				[](void* p, int i)
+				{
+					foo();
+				}
+			);
+		}
+
+		time_point t1 = high_resolution_clock::now();
+		std::cout << "elapsed: " << std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() << std::endl;
+	}
+
+
+	{
+		std::vector<int> v(v_size);
+
+
+		time_point t0 = high_resolution_clock::now();
+		int k = count;
+		
+		while (k--)
+		{
+			parallel(v.begin(), v.end(), n,
+				[](vector<int>::iterator i, int a)
+				{
+					foo();
+				}, 3
+			);
+		}
+
+		time_point t1 = high_resolution_clock::now();
+
+		std::cout << "elapsed: " << std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() << std::endl;
+	}
+	{
+		std::vector<int> v(v_size);
+
+
+		time_point t0 = high_resolution_clock::now();
+		int k = count;
+		
+		while (k--)
+		{
+			parallel(v.begin(), v.end(), 2,
+				[](vector<int>::iterator i, int a)
+				{
+					foo();
+				}, 3
+			);
+		}
+
+		time_point t1 = high_resolution_clock::now();
+
+		std::cout << "elapsed: " << std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() << std::endl;
+	}
+	{
+		std::vector<int> v(v_size);
+
+
+		time_point t0 = high_resolution_clock::now();
+		int k = count;
+		
+		while (k--)
+		{
+			parallel(&v[0], &v[0] + v.size(), n,
+				[](int* i, int a)
+				{
+					foo();
+				}, 3
+			);
+		}
+
+		time_point t1 = high_resolution_clock::now();
+
+		std::cout << "elapsed: " << std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() << std::endl;
+	}
+	{
+		std::vector<int> v(v_size);
+
+
+		time_point t0 = high_resolution_clock::now();
+		int k = count;
+		
+		while (k--)
+		{
+			parallel(v.begin(), v.end(), n,
+				[](vector<int>::iterator i, int a)
+				{
+					foo();
+				}, 3
+			);
+		}
+
+		time_point t1 = high_resolution_clock::now();
+
+		std::cout << "elapsed: " << std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() << std::endl;
+	}
+	{
+		std::vector<int> v(v_size);
+
+
+		time_point t0 = high_resolution_clock::now();
+		int k = count;
+		
+		while (k--)
+		{
+			for (auto it = v.begin(); it < v.end(); ++it)
+			{
+				foo();
+			}
+		}
+
+		time_point t1 = high_resolution_clock::now();
+
+		std::cout << "elapsed: " << std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() << std::endl;
 	}
 }
+
+*/
