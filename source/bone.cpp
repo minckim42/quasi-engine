@@ -1,5 +1,5 @@
-#include "bone.h"
-#include "model.h"
+#include "bone.hpp"
+#include "model.hpp"
 
 Bone::Bone(const std::shared_ptr<Model> model):
 	name(model->name)

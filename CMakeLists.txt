@@ -8,8 +8,11 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(
     SOURCE_FILES
+	source/opengl/buffer.cpp
+	source/opengl/framebuffer.cpp
+	source/opengl/shader.cpp
+	source/opengl/texture.cpp
 	source/animation.cpp
-	source/buffer.cpp
 	source/bone.cpp
 	source/camera.cpp
 	source/glfw_window.cpp
@@ -18,9 +21,7 @@ set(
 	source/model.cpp
 	source/model_load.cpp
 	source/move.cpp
-	source/shader.cpp
-	source/stb_image.cpp
-	source/texture.cpp
+	source/image_processor/stb_image.cpp
 	main.cpp
 )
 

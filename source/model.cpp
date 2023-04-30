@@ -1,40 +1,4 @@
-#include "model.h"
-
-void Model::draw(const Shader& shader, 
-	const glm::mat4& view,
-	const glm::mat4& projection,
-	const glm::mat4& model
-) const
-{
-	glm::mat4 this_model = model * transform;
-	for (auto mesh: meshes)
-	{
-		mesh->draw(shader, view, projection, this_model);
-	}
-	for (auto child: children)
-	{
-		child->draw(shader, view, projection, this_model);
-	}
-}
-
-void Model::draw(const Shader& shader, 
-	unsigned int idx_animation,
-	Microseconds time,
-	const glm::mat4& view, 
-	const glm::mat4& projection,
-	const glm::mat4& model
-)
-{
-	glm::mat4 this_model = model * transform;
-	for (auto mesh: meshes)
-	{
-		mesh->draw(shader, idx_animation, time, view, projection, this_model);
-	}
-	for (auto child: children)
-	{
-		child->draw(shader, idx_animation, time, view, projection, this_model);
-	}
-}
+#include "model.hpp"
 
 std::pair<glm::vec3, glm::vec3> Model::getBoundingBox() const
 {

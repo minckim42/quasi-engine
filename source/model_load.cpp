@@ -1,12 +1,10 @@
-#include "model_load.h"
-#include "assimp/anim.h"
 #include <chrono>
-#include <algorithm>
-#include "warning.h"
+#include "model_load.hpp"
+#include "assimp/anim.h"
+#include "utilities/warning.hpp"
+#include "utilities/clock.hpp"
 
-#include "glm_to_string.h"
-
-#include "clock.h"
+#include "utilities/glm_to_string.hpp"
 
 constexpr int MULTI_THREAD_LOADING = 1;
 
@@ -54,23 +52,22 @@ glm::quat to_glm(const aiQuaternion& q)
 	return {q.w, q.x, q.y, q.z};
 }
 
-std::shared_ptr<Object> AssimpLoader::Options::load(const std::filesystem::path& input_path)
-{
-	unsigned int flag = 0;
-	if (triangulate) flag |= aiProcess_Triangulate;
-	if (flip_uv) flag |= aiProcess_FlipUVs;
-	if (calculate_tangent_space) flag |= aiProcess_CalcTangentSpace;
-	if (generate_normal) flag |= aiProcess_GenNormals;
-	if (populate_amature) flag |=  aiProcess_PopulateArmatureData;
-	if (limit_bone_weights) flag |=  aiProcess_LimitBoneWeights;
-	return AssimpLoader().load(input_path, flag);
-}
+AssimpLoader::AssimpLoader(const Options& options):
+	options(options)
+{}
 
-std::shared_ptr<Object> AssimpLoader::load(
-	const std::filesystem::path& input_path, 
-	unsigned int flag)
+std::shared_ptr<Model> AssimpLoader::load(const std::filesystem::path& input_path)
 {
 	using namespace std::string_literals;
+
+	unsigned int flag = 0;
+	if (options.triangulate) flag |= aiProcess_Triangulate;
+	if (options.flip_uv) flag |= aiProcess_FlipUVs;
+	if (options.calculate_tangent_space) flag |= aiProcess_CalcTangentSpace;
+	if (options.generate_normal) flag |= aiProcess_GenNormals;
+	if (options.populate_amature) flag |=  aiProcess_PopulateArmatureData;
+	if (options.limit_bone_weights) flag |=  aiProcess_LimitBoneWeights;
+
 	path = root_path / input_path;
 
 	Assimp::Importer importer;
@@ -88,7 +85,6 @@ std::shared_ptr<Object> AssimpLoader::load(
 	TimePoint t0 = Clock::now();
 	load_mesh_from_scene();
 	TimePoint t1 = Clock::now();
-	std::cout << "load mesh: " << (t1 - t0).count() /1000 << std::endl;
 	
 	root_node = load_node(scene->mRootNode);
 	
@@ -112,41 +108,37 @@ void AssimpLoader::load_texture_from_scene()
 		aiTexture* ai_texture = scene->mTextures[i];
 		std::filesystem::path texture_path = parent_directory / ai_texture->mFilename.C_Str();
 		std::string texture_path_string = texture_path.string();
-		Texture::Container::iterator it = Texture::container.find(texture_path_string);
-		if (it != Texture::container.end())
-		{
-			continue;
-		}
-		Texture::container[texture_path_string] = texture_path;
+		Texture::add_texture(texture_path_string);
 	}
 }
 
-Texture* AssimpLoader::load_texture_from_material(
-	const aiMaterial* ai_material, 
-	const aiTextureType ai_texture_type
-)
+template <aiTextureType TextureType>
+Texture::Ptr AssimpLoader::load_texture_from_material(const aiMaterial* ai_material)
 {
-	int texture_count = ai_material->GetTextureCount(ai_texture_type);
+	int texture_count = ai_material->GetTextureCount(TextureType);
 	if (!texture_count)
 	{
+		if constexpr (TextureType == aiTextureType_AMBIENT) return Texture::default_texture();
+		else if (TextureType == aiTextureType_DIFFUSE) return Texture::default_texture();
+		else if (TextureType == aiTextureType_SPECULAR) return Texture::default_texture();
+		else if (TextureType == aiTextureType_HEIGHT)
+		{
+			return load_texture_from_material<aiTextureType_NORMALS>(ai_material);
+		}
+		else if (TextureType == aiTextureType_NORMALS) return Texture::default_normal_map();
 		return nullptr;
 	}
 	aiString ai_texture_path;
-	ai_material->GetTexture(ai_texture_type, 0, &ai_texture_path);
-	
+	ai_material->GetTexture(TextureType, 0, &ai_texture_path);
+
 	if (ai_texture_path.length == 0)
 	{
+		WARNING(__func__, "Texture path is empty");
 		return nullptr;
 	}
 	std::filesystem::path texture_path = parent_directory / ai_texture_path.C_Str();
 	std::string texture_path_string = texture_path.string();
-	Texture::Container::iterator it_texture = Texture::container.find(texture_path_string);
-	if (it_texture == Texture::container.cend())
-	{
-		Texture::container[texture_path_string] = texture_path;
-		return &Texture::container[texture_path_string];
-	}
-	return &it_texture->second;
+	return Texture::add_texture(texture_path_string);
 }
 
 void AssimpLoader::load_material_from_scene()
@@ -159,27 +151,24 @@ void AssimpLoader::load_material_from_scene()
 		{
 			continue;
 		}
-		Material::Container::iterator it = Material::container.find(material_name);
-		if (it != Material::container.end())
+		Material::Ptr material = Material::get_material(material_name);
+		if (material) 
 		{
-			continue;
+			return;
 		}
-		Material material = {
-			load_texture_from_material(ai_material, aiTextureType_AMBIENT),
-			load_texture_from_material(ai_material, aiTextureType_DIFFUSE),
-			load_texture_from_material(ai_material, aiTextureType_SPECULAR),
-			load_texture_from_material(ai_material, aiTextureType_NORMALS)
-		};
-
+		material = Material::add_empty_material(material_name);
+		material->ambient = load_texture_from_material<aiTextureType_AMBIENT>(ai_material);
+		material->diffuse = load_texture_from_material<aiTextureType_DIFFUSE>(ai_material);
+		material->specular = load_texture_from_material<aiTextureType_SPECULAR>(ai_material);
+		material->normal = load_texture_from_material<aiTextureType_HEIGHT>(ai_material);
+		material->name = material_name;
 		aiColor3D ai_color;
 		ai_material->Get(AI_MATKEY_COLOR_AMBIENT, ai_color);
-		material.ka = to_glm(ai_color);
+		material->ka = to_glm(ai_color);
 		ai_material->Get(AI_MATKEY_COLOR_DIFFUSE, ai_color);
-		material.kd = to_glm(ai_color);
+		material->kd = to_glm(ai_color);
 		ai_material->Get(AI_MATKEY_COLOR_SPECULAR, ai_color);
-		material.ks = to_glm(ai_color);
-
-		Material::container[material_name] = material;
+		material->ks = to_glm(ai_color);
 	}
 }
 
@@ -235,9 +224,13 @@ void AssimpLoader::mesh_set_face(std::shared_ptr<Mesh> mesh, const aiMesh* ai_me
 }
 
 template <typename Type, typename AiType>
-static void copy_from_ai(std::vector<Type>& dst, AiType* src, size_t size, ParallelProccessor* parallel = nullptr)
+static void copy_from_ai(
+	std::vector<Type>& dst, 
+	AiType* src, 
+	size_t size, 
+	ParallelProccessor* parallel = nullptr
+)
 {
-
 	if constexpr (MULTI_THREAD_LOADING)
 	{
 		if (size > 4096)
@@ -271,7 +264,9 @@ static void copy_from_ai(std::vector<Type>& dst, AiType* src, size_t size, Paral
 
 std::shared_ptr<Mesh> AssimpLoader::load_mesh(const aiMesh* ai_mesh)
 {
-	std::shared_ptr<Mesh> mesh(new Mesh);
+	std::shared_ptr<Mesh> mesh = std::make_shared<Mesh>();
+	mesh->name = ai_mesh->mName.C_Str();
+	unsigned int flag = 0;
 	if constexpr (MULTI_THREAD_LOADING)
 	{
 		if (ai_mesh->HasPositions())
@@ -281,6 +276,7 @@ std::shared_ptr<Mesh> AssimpLoader::load_mesh(const aiMesh* ai_mesh)
 		if (ai_mesh->HasNormals())
 		{
 			copy_from_ai(mesh->normal, ai_mesh->mNormals, ai_mesh->mNumVertices, &parallel);
+			flag |= ShaderContainer::NORMAL;
 		}
 		if (ai_mesh->HasTangentsAndBitangents())
 		{
@@ -291,10 +287,10 @@ std::shared_ptr<Mesh> AssimpLoader::load_mesh(const aiMesh* ai_mesh)
 		{
 			copy_from_ai(mesh->tex_coord, ai_mesh->mTextureCoords[0], ai_mesh->mNumVertices, &parallel);
 		}
-		if (ai_mesh->HasVertexColors(0))
-		{
-			copy_from_ai(mesh->color, ai_mesh->mColors[0], ai_mesh->mNumVertices, &parallel);
-		}
+		// if (ai_mesh->HasVertexColors(0))
+		// {
+		// 	copy_from_ai(mesh->color, ai_mesh->mColors[0], ai_mesh->mNumVertices, &parallel);
+		// }
 	}
 	else
 	{
@@ -305,6 +301,7 @@ std::shared_ptr<Mesh> AssimpLoader::load_mesh(const aiMesh* ai_mesh)
 		if (ai_mesh->HasNormals())
 		{
 			copy_from_ai(mesh->normal, ai_mesh->mNormals, ai_mesh->mNumVertices);
+			flag |= ShaderContainer::NORMAL;
 		}
 		if (ai_mesh->HasTangentsAndBitangents())
 		{
@@ -315,10 +312,10 @@ std::shared_ptr<Mesh> AssimpLoader::load_mesh(const aiMesh* ai_mesh)
 		{
 			copy_from_ai(mesh->tex_coord, ai_mesh->mTextureCoords[0], ai_mesh->mNumVertices);
 		}
-		if (ai_mesh->HasVertexColors(0))
-		{
-			copy_from_ai(mesh->color, ai_mesh->mColors[0], ai_mesh->mNumVertices);
-		}
+		// if (ai_mesh->HasVertexColors(0))
+		// {
+		// 	copy_from_ai(mesh->color, ai_mesh->mColors[0], ai_mesh->mNumVertices);
+		// }
 	}
 	if (ai_mesh->HasFaces())
 	{
@@ -326,7 +323,19 @@ std::shared_ptr<Mesh> AssimpLoader::load_mesh(const aiMesh* ai_mesh)
 	}
 	
 	std::string material_name = scene->mMaterials[ai_mesh->mMaterialIndex]->GetName().C_Str();
-	mesh->material = &Material::container[material_name];
+	mesh->material = Material::get_material(material_name);
+	if (mesh->material->normal)
+	{
+		flag |= ShaderContainer::NORMAL_MAP;
+	}
+	if (ai_mesh->HasBones())
+	{
+		flag |= ShaderContainer::RIGGING;
+	}
+	mesh->shader = ShaderContainer::default_shader(flag);
+	mesh->shadow_shader = ShaderContainer::default_shadow_shader(flag);
+	mesh->shadow_map_shader = ShaderContainer::default_shadow_map_shader(flag);
+
 	return mesh;
 }
 
@@ -408,7 +417,6 @@ void AssimpLoader::mesh_set_bone(std::shared_ptr<Mesh> mesh, const aiMesh* ai_me
 	mesh->weights.resize(mesh->position.size(), {0.0f});
 	mesh->bone_indices.resize(mesh->position.size(), {0u});
 	mesh->bone_indices_count.resize(mesh->position.size(), 0);
-	mesh->transform.resize(nodes.size());
 
 	mesh->bone = std::move(Bone(root_node));
 	std::map<std::string, Bone*> bone_map;
@@ -468,7 +476,7 @@ void AssimpLoader::load_animation(Mesh* mesh, const aiAnimation* ai_animation)
 		{
 			const auto& ai_key = node->mPositionKeys[k];
 			PositionKey& position_key = animation.position_key.emplace_back(
-				Microseconds(static_cast<size_t>(ai_key.mTime * 100000)),
+				Microseconds(static_cast<size_t>(ai_key.mTime / ai_animation->mTicksPerSecond * 1000000)),
 				to_glm(ai_key.mValue)
 			);
 		}
@@ -477,7 +485,7 @@ void AssimpLoader::load_animation(Mesh* mesh, const aiAnimation* ai_animation)
 		{
 			const auto& ai_key = node->mRotationKeys[k];
 			RotationKey& rotation_key = animation.rotation_key.emplace_back(
-				Microseconds(static_cast<size_t>(ai_key.mTime * 100000)),
+				Microseconds(static_cast<size_t>(ai_key.mTime / ai_animation->mTicksPerSecond * 1000000)),
 				to_glm(ai_key.mValue)
 			);
 		}
@@ -486,7 +494,7 @@ void AssimpLoader::load_animation(Mesh* mesh, const aiAnimation* ai_animation)
 		{
 			const auto& ai_key = node->mScalingKeys[k];
 			animation.scaling_key.emplace_back(
-				Microseconds(static_cast<size_t>(ai_key.mTime * 100000)),
+				Microseconds(static_cast<size_t>(ai_key.mTime / ai_animation->mTicksPerSecond * 1000000)),
 				to_glm(ai_key.mValue)
 			);
 		}

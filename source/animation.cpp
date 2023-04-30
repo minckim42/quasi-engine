@@ -1,11 +1,7 @@
-#include "animation.h"
-#include "binary_search.h"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/ext.hpp>
-
-
-
-#include <iostream>
+#include "animation.hpp"
+#include "utilities/binary_search.hpp"
 
 static glm::mat4 interpolate_position(const Position& a, const Position& b, float delta)
 {

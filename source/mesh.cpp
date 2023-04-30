@@ -1,8 +1,6 @@
-#include "../include/mesh.h"
-// #include "mesh.h"
-#include <iostream>
-#include "glm_to_string.h"
-#include "vertex_attrib.h"
+#include "mesh.hpp"
+#include "utilities/glm_to_string.hpp"
+#include "vertex_attrib.hpp"
 
 void Mesh::enable_attrib()
 {
@@ -46,47 +44,8 @@ void Mesh::enable_attrib()
 	vertex_array.set_element_count(element_buffer.get_element_count());
 }
 
-void Mesh::draw(
-	const Shader& shader, 
-	const glm::mat4& view,
-	const glm::mat4& projection,
-	const glm::mat4& model
-) const
+void Mesh::draw() const
 {
-	using namespace std::string_view_literals;
-	
-	shader.use();
-	shader.set("projection"sv, projection);
-	shader.set("view"sv, view);
-	shader.set("model"sv, model);
-	if (material) material->bind(shader);
-	vertex_array.draw();
-}
-
-void Mesh::draw(const Shader& shader, 
-	unsigned int idx_animation,
-	Microseconds time,
-	const glm::mat4& view, 
-	const glm::mat4& projection,
-	const glm::mat4& model
-)
-{
-	using namespace std::string_view_literals;
-
-	shader.use();
-	shader.set("projection"sv, projection);
-	shader.set("view"sv, view);
-	shader.set("model"sv, model);
-
-	if (has_bone)
-	{
-		bone.update(transform, idx_animation, time);
-	}
-	shader.set("transform"sv, *transform.data(), transform.size());
-	if (material)
-	{
-		material->bind(shader);
-	}
 	vertex_array.draw();
 }
 

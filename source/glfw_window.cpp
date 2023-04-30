@@ -1,6 +1,5 @@
-#include "glfw_window.h"
+#include "glfw_window.hpp"
 
-#include <iostream>
 Window::Glfw::Glfw()
 {
 	if (!glfwInit())

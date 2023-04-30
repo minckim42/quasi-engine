@@ -1,4 +1,4 @@
-#include "move.h"
+#include "move.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/ext.hpp>
 #include <cmath>

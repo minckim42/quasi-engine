@@ -1,6 +1,6 @@
-#include "camera.h"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/ext.hpp>
+#include "camera.hpp"
 
 Camera::Camera(
 	const glm::vec3& position,
@@ -32,6 +32,13 @@ void Camera::update_view() noexcept
 void Camera::update_projection() noexcept
 {
 	projection = glm::perspective(fovy, screen_size.x / screen_size.y, near, far);
+}
+
+void Camera::set_uniform(const Shader& shader) const noexcept
+{
+	shader.set(static_cast<int>(Shader::UNIFORM_LOCATION::EYE), position);
+	shader.set(static_cast<int>(Shader::UNIFORM_LOCATION::VIEW), view);
+	shader.set(static_cast<int>(Shader::UNIFORM_LOCATION::PROJECTION), projection);
 }
 
 std::ostream& operator<<(std::ostream& os, Camera& camera)
