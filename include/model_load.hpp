@@ -35,7 +35,8 @@ public:
 		ShaderContainer* shader_container = nullptr;
 	} options;
 
-	AssimpLoader(const Options& options = Options{});
+	AssimpLoader() = default;
+	AssimpLoader(const Options& options);
 
 	std::shared_ptr<Model> load(const std::filesystem::path& input_path);
 
@@ -49,7 +50,8 @@ private:
 	std::map<std::string, std::shared_ptr<Model>> nodes_map;
 	std::shared_ptr<Model> root_node;
 
-	ParallelProccessor parallel = ParallelProccessor(16);
+	// inline static 
+	ParallelProcessor parallel = ParallelProcessor(16);
 
 	void load_texture_from_scene();
 	template <aiTextureType TextureType>

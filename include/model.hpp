@@ -16,7 +16,7 @@ public:
 	Model& operator=(const Model&) = delete;
 	Model& operator=(Model&& other) noexcept = default;
 
-	std::pair<glm::vec3, glm::vec3> getBoundingBox() const;
+	std::pair<glm::vec3, glm::vec3> get_bounding_box() const;
 
 	bool cull_empty();
 };

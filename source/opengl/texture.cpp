@@ -1,20 +1,16 @@
 #include <string>
 #include "utilities/definition.hpp"
 #include "opengl/texture.hpp"
-#include "image_processor/stb_image.hpp"
-#include "image_processor/stb_image_write.hpp"
+// #include "image_processor/stb_image.hpp"
+// #include "image_processor/stb_image_write.hpp"
+
+#include "image.hpp"
 
 using namespace std::string_literals;
 
-Texture::Texture(): id(0)
-{
-	glCreateTextures(GL_TEXTURE_2D, 1, &id);
-}
 
-Texture::Texture(const std::filesystem::path& image_path, bool flip):
-	path(image_path.string())
+Texture::Texture(const std::filesystem::path& image_path, bool flip)
 {
-	glCreateTextures(GL_TEXTURE_2D, 1, &id);
 	load_image(image_path, flip);
 }
 
@@ -42,57 +38,52 @@ Texture& Texture::operator=(Texture&& other) noexcept
 	return *this;
 }
 
-void Texture::allocate(int width, int height, Texture::FORMAT format)
+void Texture::allocate_rgba(int width, int height)
 {
 	this->width = width;
 	this->height = height;
-	this->format = format;
-	if (format == FORMAT::RGBA8)
-	{
-		glTextureParameteri(id, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTextureParameteri(id, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTextureStorage2D(id, 1, GL_RGBA8, width, height);
-
-	}
-	else if (format == FORMAT::DEPTH_COMPONENT)
-	{
-		glTextureParameteri(id, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTextureParameteri(id, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTextureParameteri(id, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-		glTextureParameteri(id, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-		glTextureStorage2D(id, 1, GL_DEPTH_COMPONENT32F, width, height);
-	}
-}
-
-void Texture::load_image(const std::filesystem::path& image_path, bool flip)
-{
-	format = FORMAT::RGBA8;
+	glCreateTextures(GL_TEXTURE_2D, 1, &id);
 	glTextureParameteri(id, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTextureParameteri(id, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	stbi_set_flip_vertically_on_load(flip);
-	int dummy_channel_size = 0;
-	unsigned char* data = 
-		stbi_load(
-			(root_path / image_path).string().data(), 
-			&width, 
-			&height, 
-			&dummy_channel_size, 
-			4
-		);
-	if (!data)
-		throw std::runtime_error("[Error] Failed to open image: "s + image_path.string());
-
 	glTextureStorage2D(id, 1, GL_RGBA8, width, height);
-	glTextureSubImage2D(id, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
-	glGenerateTextureMipmap(id);
-	stbi_image_free(data);
+}
+
+void Texture::allocate_depth(int width, int height)
+{
+	this->width = width;
+	this->height = height;
+	glCreateTextures(GL_TEXTURE_2D, 1, &id);
+	glTextureParameteri(id, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTextureParameteri(id, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTextureParameteri(id, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTextureParameteri(id, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	glTextureStorage2D(id, 1, GL_DEPTH_COMPONENT32F, width, height);
+}
+
+void Texture::allocate_cube_map(int width, int height)
+{
+	this->width = width;
+	this->height = height;
+	glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &id);
+	glTextureParameteri(id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTextureParameteri(id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTextureParameteri(id, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTextureStorage2D(id, 1, GL_RGBA8, width, height);
+}
+
+void Texture::load_image(const std::filesystem::path& image_path, bool flip)
+{
+	path = image_path.string();
+	Image image(image_path, flip);
+
+	allocate_rgba(image.get_width(), image.get_height());
+	set_image(image.get_width(), image.get_height(), image.get_buffer());
 }
 
 void Texture::bind(const Shader& shader, const std::string_view& name, GLuint unit) const
@@ -107,6 +98,23 @@ void Texture::bind(const Shader& shader, GLuint location, GLuint unit) const
 	shader.set(location, unit);
 }
 
+void Texture::set_image(int width, int height, unsigned char* data)
+{
+	glTextureSubImage2D(id, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	glGenerateTextureMipmap(id);
+}
+
+void Texture::set_cube_image(const std::array<Image, 6>& images)
+{
+	glTextureSubImage3D(id, 0, 0, 0, 0, width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE, images[0].get_buffer());
+	glTextureSubImage3D(id, 0, 0, 0, 1, width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE, images[1].get_buffer());
+	glTextureSubImage3D(id, 0, 0, 0, 2, width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE, images[2].get_buffer());
+	glTextureSubImage3D(id, 0, 0, 0, 3, width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE, images[3].get_buffer());
+	glTextureSubImage3D(id, 0, 0, 0, 4, width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE, images[4].get_buffer());
+	glTextureSubImage3D(id, 0, 0, 0, 5, width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE, images[5].get_buffer());
+	glGenerateTextureMipmap(id);
+}
+
 std::vector<unsigned char> Texture::get_image() const
 {
 	std::vector<unsigned char> buffer(get_buffer_size());
@@ -117,17 +125,9 @@ std::vector<unsigned char> Texture::get_image() const
 void Texture::save_as_image(const std::filesystem::path& path) const
 {
 	std::vector<unsigned char> buffer = get_image();
-	std::string extension = path.extension().string();
-	stbi_flip_vertically_on_write(true);
-	if (extension == ".png")
-	{
-		stbi_write_png(path.string().data(), width, height, channel_size, buffer.data(), 0);
-	}
-	else if (extension == ".jpg")
-	{
-		stbi_write_jpg(path.string().data(), width, height, channel_size, buffer.data(), 90);
-	}
-
+	Image image;
+	image.set_buffer(width, height, buffer.data());
+	image.save_as(path);
 }
 
 size_t Texture::get_buffer_size() const
@@ -145,32 +145,22 @@ Texture::operator GLuint()
 	return id;
 }
 
-Texture Texture::create_default_normal_map()
-{
-	Texture default_normal_map;
-	glTextureParameteri(default_normal_map, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTextureParameteri(default_normal_map, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTextureParameteri(default_normal_map, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTextureParameteri(default_normal_map, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	unsigned int data = 0xffff8080;
-	glTextureStorage2D(default_normal_map, 1, GL_RGBA8, 1, 1);
-	glTextureSubImage2D(default_normal_map, 0, 0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &data);
-	glGenerateTextureMipmap(default_normal_map);
-	return default_normal_map;
-}
-
 Texture Texture::create_default_texture()
 {
 	Texture default_texture;
-	glTextureParameteri(default_texture, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTextureParameteri(default_texture, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTextureParameteri(default_texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTextureParameteri(default_texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	unsigned int data = 0xffffffff;
-	glTextureStorage2D(default_texture, 1, GL_RGBA8, 1, 1);
-	glTextureSubImage2D(default_texture, 0, 0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, &data);
-	glGenerateTextureMipmap(default_texture);
+	default_texture.allocate_rgba(1, 1);
+	default_texture.set_image(1, 1, reinterpret_cast<unsigned char*>(&data));
 	return default_texture;
+}
+
+Texture Texture::create_default_normal_map()
+{
+	Texture default_normal_map;
+	unsigned int data = 0xffff8080;
+	default_normal_map.allocate_rgba(1, 1);
+	default_normal_map.set_image(1, 1, reinterpret_cast<unsigned char*>(&data));
+	return default_normal_map;
 }
 
 Texture::Ptr Texture::default_texture()
@@ -192,7 +182,7 @@ Texture::Ptr Texture::add_texture(const std::filesystem::path& image_path, bool 
 	{
 		return &it->second;
 	}
-	container[image_path.string()] = Texture(image_path, flip);
+	return &(container[image_path.string()] = Texture(image_path, flip));
 }
 
 Texture::Ptr Texture::add_texture(const std::string& image_path, bool flip)
@@ -202,7 +192,7 @@ Texture::Ptr Texture::add_texture(const std::string& image_path, bool flip)
 	{
 		return &it->second;
 	}
-	container[image_path] = Texture(image_path, flip);
+	return &(container[image_path] = Texture(image_path, flip));
 }
 
 Texture::Ptr Texture::get_texture(const std::string& name)
@@ -224,4 +214,39 @@ bool Texture::delete_texture(const std::string& name)
 	}
 	container.erase(it);
 	return true;
+}
+
+Texture Texture::create_texture(const std::filesystem::path& image_path, bool flip)
+{
+	Texture texture;
+	texture.load_image(image_path, flip);
+	return texture;
+}
+
+Texture Texture::create_buffer(int w, int h)
+{
+	Texture texture;
+	texture.allocate_rgba(w, h);
+	return texture;
+}
+
+Texture Texture::create_depth_buffer(int w, int h)
+{
+	Texture texture;
+	texture.allocate_depth(w, h);
+	return texture;
+}
+
+Texture Texture::create_cube_map(const std::array<std::filesystem::path, 6>& image_path, bool flip)
+{
+	Texture texture;
+
+	std::array<Image, 6> images;
+	for (int i = 0; i < 6; ++i)
+	{
+		images[i].load(image_path[i], flip);
+	}
+	texture.allocate_cube_map(images[0].get_width(), images[0].get_height());
+	texture.set_cube_image(images);
+	return texture;
 }

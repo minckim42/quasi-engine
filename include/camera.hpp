@@ -20,6 +20,8 @@ public:
    void update_projection() noexcept;
    void set_uniform(const Shader& shader) const noexcept;
 
+   void set_viewport() const;
+
    glm::mat4 view;
    glm::mat4 projection;
    glm::vec2 screen_size;

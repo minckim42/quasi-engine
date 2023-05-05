@@ -1,6 +1,6 @@
 #include "model.hpp"
 
-std::pair<glm::vec3, glm::vec3> Model::getBoundingBox() const
+std::pair<glm::vec3, glm::vec3> Model::get_bounding_box() const
 {
 	constexpr std::pair<glm::vec3, glm::vec3> empty_case = {
 		{FLT_MAX, FLT_MAX, FLT_MAX},
@@ -12,13 +12,13 @@ std::pair<glm::vec3, glm::vec3> Model::getBoundingBox() const
 	};
 	for (const auto& mesh: meshes)
 	{
-		auto bounding_box = mesh->getBoundingBox();
+		auto bounding_box = mesh->get_bounding_box();
 		result.first = glm::min(result.first, bounding_box.first);
 		result.second = glm::max(result.second, bounding_box.second);
 	}
 	for (const auto& child: children)
 	{
-		auto bounding_box = child->getBoundingBox();
+		auto bounding_box = child->get_bounding_box();
 		result.first = glm::min(result.first, bounding_box.first);
 		result.second = glm::max(result.second, bounding_box.second);
 	}

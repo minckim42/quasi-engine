@@ -1,0 +1,12 @@
+# Rhino
+newmtl SYLT_Business_Wom-13_diffuse
+Ka 0.1000 0.1000 0.1000
+Kd 0.8000 0.8000 0.8000
+Ks 0.1000 0.1000 0.1000
+Tf 0.0000 0.0000 0.0000
+d 1.0000
+Ns 0.0000
+map_Ka SYLT_Business_Wom-13_diffuse.jpg
+map_Kd SYLT_Business_Wom-13_diffuse.jpg
+map_Ks SYLT_Business_Wom-13_diffuse.jpg
+map_Bump SYLT_Business_Wom-13_normal.png

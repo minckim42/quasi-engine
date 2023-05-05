@@ -22,6 +22,7 @@ Framebuffer& Framebuffer::operator=(Framebuffer&& other) noexcept
 	if (this == &other) return *this;
 	id = other.id;
 	other.id = 0;
+	return *this;
 }
 
 Framebuffer::~Framebuffer()

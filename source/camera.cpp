@@ -41,6 +41,12 @@ void Camera::set_uniform(const Shader& shader) const noexcept
 	shader.set(static_cast<int>(Shader::UNIFORM_LOCATION::PROJECTION), projection);
 }
 
+void Camera::set_viewport() const
+{
+	glViewport(0, 0, static_cast<GLsizei>(screen_size.x), static_cast<GLsizei>(screen_size.y));
+}
+
+
 std::ostream& operator<<(std::ostream& os, Camera& camera)
 {
 	return os << "[Camera]\n"

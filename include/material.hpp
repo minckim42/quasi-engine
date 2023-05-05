@@ -22,6 +22,7 @@ public:
 	glm::vec3 ka = {0.0f, 0.0f, 0.0f};
 	glm::vec3 kd = {0.0f, 0.0f, 0.0f};
 	glm::vec3 ks = {0.0f, 0.0f, 0.0f};
+	glm::vec3 tr = {0.0f, 0.0f, 0.0f}; // transparent
 	std::string name;
 
 	void bind(const Shader& shader) const noexcept;

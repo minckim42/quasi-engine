@@ -13,7 +13,6 @@ public:
 		RIGGING = 4,
 		PONG = 8,
 		COLOR = 16,
-		SHADOW = 32,
 	};
 
 	template <typename...Arg>
@@ -47,8 +46,6 @@ public:
 	{
 		static Shader rigging_normalmap(root_path / "./shader/normal_rigging.vert", root_path / "./shader/normal.frag");
 		static Shader normalmap(root_path / "./shader/normal.vert", root_path / "./shader/normal.frag");
-		std::cout << flag << std::endl;
-		
 		switch (flag)
 		{
 			case (RIGGING | NORMAL_MAP):
@@ -97,6 +94,25 @@ public:
 				return &none;
 			default:
 				throw std::runtime_error("[ERROR] Default shadow map shader not found: " + std::to_string(flag));
+		}
+	}
+
+	static Shader* default_shadow_env_shader(unsigned int flag)
+	{
+		static Shader rigging_normalmap(root_path / "./shader/shadow_normal_rigging.vert", root_path / "./shader/shadow_normal_env.frag");
+		static Shader normalmap(root_path / "./shader/shadow_normal.vert", root_path / "./shader/shadow_normal_env.frag");
+		switch (flag)
+		{
+			case (RIGGING | NORMAL_MAP):
+				return &rigging_normalmap;
+			case (RIGGING | NORMAL):
+				return &rigging_normalmap;
+			case (NORMAL_MAP):
+				return &normalmap;
+			case (NORMAL):
+				return &normalmap;
+			default:
+				throw std::runtime_error("[ERROR] Default shadow env shader not found: " + std::to_string(flag));
 		}
 	}
 

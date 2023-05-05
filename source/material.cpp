@@ -4,41 +4,30 @@
 #include <iostream>
 void Material::bind(const Shader& shader) const noexcept
 {
-	if (ambient)
-	{
-		ambient->bind(
-			shader, 
-			static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::AMBIENT), 
-			static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::AMBIENT)
-		);
-	}
-	if (diffuse)
-	{
-		diffuse->bind(
-			shader, 
-			static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::DIFFUSE), 
-			static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::DIFFUSE)
-		);
-	}
-	if (specular)
-	{
-		specular->bind(
-			shader, 
-			static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::SPECULAR), 
-			static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::SPECULAR)
-		);
-	}
-	if (normal)
-	{
-		normal->bind(
-			shader, 
-			static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::NORMAL_MAP), 
-			static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::NORMAL_MAP)
-		);
-	}
+	ambient->bind(
+		shader, 
+		static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::AMBIENT), 
+		static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::AMBIENT)
+	);
+	diffuse->bind(
+		shader, 
+		static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::DIFFUSE), 
+		static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::DIFFUSE)
+	);
+	specular->bind(
+		shader, 
+		static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::SPECULAR), 
+		static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::SPECULAR)
+	);
+	normal->bind(
+		shader, 
+		static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::NORMAL_MAP), 
+		static_cast<int>(Shader::TEXTURE_LOCATION_BINDING::NORMAL_MAP)
+	);
 	shader.set(static_cast<int>(Shader::UNIFORM_LOCATION::KA), ka);
 	shader.set(static_cast<int>(Shader::UNIFORM_LOCATION::KD), kd);
 	shader.set(static_cast<int>(Shader::UNIFORM_LOCATION::KS), ks);
+	shader.set(static_cast<int>(Shader::UNIFORM_LOCATION::TR), tr);
 }
 
 Material::Ptr Material::add_empty_material(const std::string& name)

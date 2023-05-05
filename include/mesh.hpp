@@ -39,11 +39,12 @@ public:
 	std::string name;
 	Shader* shader;
 	Shader* shadow_shader;
+	Shader* shadow_env_shader;
 	Shader* shadow_map_shader;
 
 	void enable_attrib();
 	void draw() const;
-	std::pair<glm::vec3, glm::vec3> getBoundingBox() const;
+	std::pair<glm::vec3, glm::vec3> get_bounding_box() const;
 
 private:
 	VertexArray vertex_array;

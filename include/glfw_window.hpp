@@ -25,31 +25,31 @@ public:
 		[[nodiscard]] Window create() const;
 	};
 	
-	template <typename F, typename... ARG>
-	void loop(F& f, ARG&...arg)
-	{
-		glEnable(GL_DEPTH_TEST);
-		while (!glfwWindowShouldClose(window))
-		{
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			f(arg...);
-			glfwSwapBuffers(window);
-			glfwPollEvents();
-		}
-	}
+	// template <typename F, typename... ARG>
+	// void loop(F f, ARG&...arg)
+	// {
+	// 	glEnable(GL_DEPTH_TEST);
+	// 	while (!glfwWindowShouldClose(window))
+	// 	{
+	// 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	// 		f(arg...);
+	// 		glfwSwapBuffers(window);
+	// 		glfwPollEvents();
+	// 	}
+	// }
 
-	template <typename F, typename... ARG>
-	void loop(F&& f, ARG&...arg)
-	{
-		glEnable(GL_DEPTH_TEST);
-		while (!glfwWindowShouldClose(window))
-		{
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			f(arg...);
-			glfwSwapBuffers(window);
-			glfwPollEvents();
-		}
-	}
+	// template <typename F, typename... ARG>
+	// void loop(F&& f, ARG&...arg)
+	// {
+	// 	glEnable(GL_DEPTH_TEST);
+	// 	while (!glfwWindowShouldClose(window))
+	// 	{
+	// 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	// 		f(arg...);
+	// 		glfwSwapBuffers(window);
+	// 		glfwPollEvents();
+	// 	}
+	// }
 
 	Window(const Window&) = delete;
 	Window& operator=(const Window&) = delete;
@@ -58,6 +58,20 @@ public:
 	~Window();
 
 	operator GLFWwindow*(){ return window; }
+	
+	void set_viewport()
+	{
+		int w, h;
+		glfwGetWindowSize(window, &w, &h);
+		glViewport(0, 0, w, h);
+	}
+
+	glm::ivec2 get_window_size() const
+	{
+		glm::ivec2 result;
+		glfwGetWindowSize(window, &result.x, &result.y);
+		return result;
+	}
 
 private:
 	GLFWwindow* window;

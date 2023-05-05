@@ -12,16 +12,18 @@ set(
 	source/opengl/framebuffer.cpp
 	source/opengl/shader.cpp
 	source/opengl/texture.cpp
+	source/image_processor/stb_image.cpp
 	source/animation.cpp
 	source/bone.cpp
 	source/camera.cpp
 	source/glfw_window.cpp
+	source/image.cpp
 	source/material.cpp
 	source/mesh.cpp
 	source/model.cpp
 	source/model_load.cpp
 	source/move.cpp
-	source/image_processor/stb_image.cpp
+	source/renderer.cpp
 	main.cpp
 )
 

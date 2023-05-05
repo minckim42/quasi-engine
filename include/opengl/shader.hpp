@@ -60,6 +60,7 @@ public:
 		DIFFUSE = 2,
 		SPECULAR = 3,
 		NORMAL_MAP = 4,
+		ENV_MAP = 9,
 		SHADOW_MAP = 10,
 	};
 
@@ -80,6 +81,7 @@ public:
 		KA = 41,
 		KD = 42,
 		KS = 43,
+		TR = 44,
 		
 		// light
 		N_LIGHT = 51,

@@ -3,50 +3,72 @@
 #include <thread>
 #include <mutex>
 #include <map>
+#include <vector>
 
-class Foo
+#include <cstdio>
+
+struct Bar
 {
-public:
-	template <typename...Arg>
-	Foo(Arg...arg)
+	Bar(int k)
 	{
-		load(arg...);
-		std::cout << "BYE\n";
+		a[0] = k;
 	}
-
-	template <typename T, typename...Arg>
-	void load(T t, Arg...arg)
-	{
-		std::cout << t << std::endl;
-		load(arg...);
-	}
-
-	void load()
-	{
-		std::cout << "end?" << std::endl;
-	}
-
-	Foo(Foo&& other) noexcept
-	{
-		std::cout << "move construct\n";
-	}
-	
-	Foo()
-	{
-		std::cout << "default\n";
-	}
-
-	Foo& operator=(Foo&& other) noexcept
-	{
-		std::cout << "move assign\n";
-		return *this;
-	}
+	int v[10000000];
 };
 
-std::map<int, Foo> m;
+struct Foo
+{
+	std::shared_ptr<Bar> v;
+	Foo(int a): v(std::make_shared<Bar>(a)) {}
+};
+
 
 int main()
 {
-	m[15] = Foo(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
-	// m.emplace(15, Foo{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+	std::vector<Foo> con;
+
+	std::mutex m;
+
+	std::thread t0(
+		[&]() {
+			int k = 0;
+			while (true)
+			{
+				for (int i = 0; i < 10; i++)
+				{
+					std::lock_guard<std::mutex> g(m);
+					con.emplace_back(i);
+				}
+				{
+					std::lock_guard<std::mutex> g(m);
+					con.clear();
+				}
+			}
+		}
+	);
+
+	std::thread t1(
+		[&]() {
+			while (true)
+			{
+
+				std::vector<Foo> cop;
+				{
+					std::lock_guard<std::mutex> g(m);
+					cop = con;
+				}
+				for (Foo& i: cop)
+				{
+					std::cout << i.v->v[0] << std::endl;
+				}
+				std::cout << "========\n";
+				{
+					std::lock_guard<std::mutex> g(m);
+					cop.clear();
+				}
+			}
+		}
+	);
+	t0.join();
+	t1.join();
 }

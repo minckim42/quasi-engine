@@ -49,7 +49,7 @@ void Mesh::draw() const
 	vertex_array.draw();
 }
 
-std::pair<glm::vec3, glm::vec3> Mesh::getBoundingBox() const
+std::pair<glm::vec3, glm::vec3> Mesh::get_bounding_box() const
 {
 	using namespace std::chrono_literals;
 

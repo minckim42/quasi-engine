@@ -6,7 +6,7 @@
 
 #include "utilities/glm_to_string.hpp"
 
-constexpr int MULTI_THREAD_LOADING = 1;
+constexpr int MULTI_THREAD_LOADING = 0;
 
 glm::vec3 to_glm(const aiColor3D& v)
 {
@@ -60,6 +60,8 @@ std::shared_ptr<Model> AssimpLoader::load(const std::filesystem::path& input_pat
 {
 	using namespace std::string_literals;
 
+std::cout << input_path << std::endl;
+
 	unsigned int flag = 0;
 	if (options.triangulate) flag |= aiProcess_Triangulate;
 	if (options.flip_uv) flag |= aiProcess_FlipUVs;
@@ -106,7 +108,7 @@ void AssimpLoader::load_texture_from_scene()
 	for (int i = 0; i < scene->mNumTextures; ++i)
 	{
 		aiTexture* ai_texture = scene->mTextures[i];
-		std::filesystem::path texture_path = parent_directory / ai_texture->mFilename.C_Str();
+		std::filesystem::path texture_path = parent_directory / "./" / ai_texture->mFilename.C_Str();
 		std::string texture_path_string = texture_path.string();
 		Texture::add_texture(texture_path_string);
 	}
@@ -161,6 +163,22 @@ void AssimpLoader::load_material_from_scene()
 		material->diffuse = load_texture_from_material<aiTextureType_DIFFUSE>(ai_material);
 		material->specular = load_texture_from_material<aiTextureType_SPECULAR>(ai_material);
 		material->normal = load_texture_from_material<aiTextureType_HEIGHT>(ai_material);
+
+
+
+
+		// std::cout << "aiTextureType_EMISSIVE: " << ai_material->GetTextureCount(aiTextureType_EMISSIVE) << std::endl;
+		// std::cout << "aiTextureType_HEIGHT: " << ai_material->GetTextureCount(aiTextureType_HEIGHT) << std::endl;
+		// std::cout << "aiTextureType_NORMALS: " << ai_material->GetTextureCount(aiTextureType_NORMALS) << std::endl;
+		// std::cout << "aiTextureType_SHININESS: " << ai_material->GetTextureCount(aiTextureType_SHININESS) << std::endl;
+		// std::cout << "aiTextureType_OPACITY: " << ai_material->GetTextureCount(aiTextureType_OPACITY) << std::endl;
+		// std::cout << "aiTextureType_DISPLACEMENT: " << ai_material->GetTextureCount(aiTextureType_DISPLACEMENT) << std::endl;
+		// std::cout << "aiTextureType_LIGHTMAP: " << ai_material->GetTextureCount(aiTextureType_LIGHTMAP) << std::endl;
+		// std::cout << "aiTextureType_REFLECTION: " << ai_material->GetTextureCount(aiTextureType_REFLECTION) << std::endl;
+
+
+
+
 		material->name = material_name;
 		aiColor3D ai_color;
 		ai_material->Get(AI_MATKEY_COLOR_AMBIENT, ai_color);
@@ -169,6 +187,8 @@ void AssimpLoader::load_material_from_scene()
 		material->kd = to_glm(ai_color);
 		ai_material->Get(AI_MATKEY_COLOR_SPECULAR, ai_color);
 		material->ks = to_glm(ai_color);
+		ai_material->Get(AI_MATKEY_COLOR_TRANSPARENT, ai_color);
+		material->tr = glm::vec3(1.0f) - to_glm(ai_color);
 	}
 }
 
@@ -228,15 +248,15 @@ static void copy_from_ai(
 	std::vector<Type>& dst, 
 	AiType* src, 
 	size_t size, 
-	ParallelProccessor* parallel = nullptr
+	ParallelProcessor* parallel = nullptr
 )
 {
 	if constexpr (MULTI_THREAD_LOADING)
 	{
-		if (size > 4096)
+		if (size > 256)
 		{
 			dst.resize(size);
-			parallel->work(src, size, std::min(15llu, size / 256), 
+			parallel->work(src, size, 12, 
 				[&dst](void* p, size_t i)
 				{
 					dst[i] = to_glm(static_cast<const AiType*>(p)[i]);
@@ -334,6 +354,7 @@ std::shared_ptr<Mesh> AssimpLoader::load_mesh(const aiMesh* ai_mesh)
 	}
 	mesh->shader = ShaderContainer::default_shader(flag);
 	mesh->shadow_shader = ShaderContainer::default_shadow_shader(flag);
+	mesh->shadow_env_shader = ShaderContainer::default_shadow_env_shader(flag);
 	mesh->shadow_map_shader = ShaderContainer::default_shadow_map_shader(flag);
 
 	return mesh;
